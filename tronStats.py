@@ -35,7 +35,7 @@ on_the_draw = False
 
 ## Number of simulations
 ## N = 100000 should take a couple of seconds, N = million ~30 seconds.
-N = 1000
+N = 100000
 
 class gameMechanics(object):
 	class turnMechanics:
@@ -51,9 +51,10 @@ class gameMechanics(object):
 		self.deck.remove(new_card)
 		
 	def playLand(self, land):
-		self.hand.remove(land)
-		self.battlefield.append(land)
-		self.turn.lands_to_play = self.turn.lands_to_play - 1
+		if self.turn.lands_to_play:
+			self.hand.remove(land)
+			self.battlefield.append(land)
+			self.turn.lands_to_play = self.turn.lands_to_play - 1
 
 	def playUrzaLand(self):
 		for land in ["Mine", "PP", "Tower"]:
@@ -81,9 +82,26 @@ class gameMechanics(object):
 						self.deck.remove(tutored_land)
 						self.hand.append(tutored_land)
 			elif card == "scry":
-				pass
+				self.hand.remove("scry")
+				for tutored_land in ["Mine", "PP", "Tower"]:
+					if tutored_land not in self.battlefield and tutored_land in self.deck:
+						self.deck.remove(tutored_land)
+						self.hand.append(tutored_land)
 			elif card == "stir":
-				pass
+				temp_cards = random.sample(self.deck, 5)
+				card_chosen = 0
+				for card in temp_cards:
+					self.deck.remove(card)
+					if card_chosen == 0 and card in ["Mine", "PP", "Tower"] and card not in self.battlefield and card not in self.hand:
+						card_chosen = 1
+						self.hand.append(card)
+				# Take Karn if you already have Tron
+				if card_chosen == 0 and "Karn" in temp_cards:
+					card_chosen = 1
+					self.hand.append("Karn")
+				elif card_chosen == 0 and "star" in temp_cards:
+					card_chosen = 1
+					self.hand.append("star")
 
 	def __init__(self, onTheDraw):
 		# Populate the deck
@@ -180,12 +198,7 @@ def new_game(draw):
 			game.useCard("star")
 			#Do you have Scrying?
 			if "scry" in game.hand:
-				# Play Scrying
-				game.hand.remove("scry")
-				for tutored_land in ["Mine", "PP", "Tower"]:
-					if tutored_land not in game.battlefield and tutored_land in game.deck:
-						game.deck.remove(tutored_land)
-						game.hand.append(tutored_land)
+				game.useCard("scry")
 			else:
 				if "star" in game.hand:
 					#Play and use a star
@@ -193,24 +206,9 @@ def new_game(draw):
 					game.useCard("star")
 					stop_playing_stars = True
 				if "stir" in game.hand:
-					#Resolve Stirrings
-					temp_cards = random.sample(game.deck, 5)
-					card_chosen = 0
-					for card in temp_cards:
-						game.deck.remove(card)
-						if card_chosen == 0 and card in ["Mine", "PP", "Tower"] and card not in game.battlefield and card not in game.hand:
-							card_chosen = 1
-							game.hand.append(card)
-					# Take Karn if you already have Tron
-					if card_chosen == 0 and "Karn" in temp_cards:
-						card_chosen = 1
-						game.hand.append("Karn")
-					elif card_chosen == 0 and "star" in temp_cards:
-						card_chosen = 1
-						game.hand.append("star")
+					game.useCard("stir")
 				if "star" in game.hand and not stop_playing_stars:
 					game.playCard("star")
-		# Use a map if you have it
 		elif "map" in game.battlefield:
 			game.useCard("map")
 
@@ -224,56 +222,29 @@ def new_game(draw):
 
 			if (game.turn.lands_to_play):
 				if "stir" in game.hand:
-					#Resolve Stirrings
-					temp_cards = random.sample(game.deck, 5)
-					card_chosen = 0
-					for card in temp_cards:
-						game.deck.remove(card)
-						if card_chosen == 0 and card in ["Mine", "PP", "Tower"] and card not in game.battlefield and card not in game.hand:
-							card_chosen = 1
-							game.hand.append(card)
-					if card_chosen == 1:
-						# You found a land
-						game.playUrzaLand()
-						# Do you have a star?
-						if "star" in game.hand:
-							game.playCard("star")
-						# End turn
-					else:
-						# You only have one land on Turn 2, so no Turn 3 Karn
-						return False, opening
+					game.useCard("stir")
+					game.playUrzaLand()
+					# Do you have a star?
+					if "star" in game.hand:
+						game.playCard("star")
+					# End turn
+				if game.turn.lands_to_play:
+					# You only have one land on Turn 2, so no Turn 3 Karn
+					return False, opening
 			else:
 				# You played a land.
 				# Do you have Scrying?
 				if "scry" in game.hand:
-					# Play Scrying
-					game.hand.remove("scry")
-					for tutored_land in ["Mine", "PP", "Tower"]:
-						if tutored_land not in game.battlefield and tutored_land in game.deck:
-							game.deck.remove(tutored_land)
-							game.hand.append(tutored_land)
+					game.useCard("scry")
 					# END TURN
 				else:
 					if "star" in game.hand:
 						#Play and use a star
+						game.playCard("star")
 						game.useCard("star")	
 						stop_playing_stars = True
 					if "stir" in game.hand:
-						#Resolve Stirrings
-						temp_cards = random.sample(game.deck, 5)
-						card_chosen = 0
-						for card in temp_cards:
-							game.deck.remove(card)
-							if card_chosen == 0 and card in ["Mine", "PP", "Tower"] and card not in game.battlefield and card not in game.hand:
-								card_chosen = 1
-								game.hand.append(card)
-						# Take Karn if you already have Tron
-						if card_chosen == 0 and "Karn" in temp_cards:
-							card_chosen = 1
-							game.hand.append("Karn")
-						elif card_chosen == 0 and "star" in temp_cards:
-							card_chosen = 1
-							game.hand.append("star")
+						game.useCard("stir")
 					if "star" in game.hand and not stop_playing_stars:
 						#Play your last star
 						game.playCard("star")
