@@ -82,7 +82,7 @@ class gameMechanics(object):
 						self.deck.remove(tutored_land)
 						self.hand.append(tutored_land)
 		elif card in self.hand:
-			elif card == "scry":
+			if card == "scry":
 				self.hand.remove("scry")
 				for tutored_land in ["Mine", "PP", "Tower"]:
 					if tutored_land not in self.battlefield and tutored_land in self.deck:
