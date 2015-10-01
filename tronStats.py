@@ -34,30 +34,61 @@ class simulation():
 		self.on_the_draw = False
 		## Number of simulations
 		## N = 100000 should take a couple of seconds, N = million ~30 seconds.
-		self.N = 1000000
+		self.N = 100000
 		
 		self.deckToTest = ["Mine", "Mine", "Mine", "Mine", "PP", "PP", "PP", "PP", "Tower", "Tower", "Tower", "Tower", "star", "star", "star", "star", "star", "star", "star", "star", "map", "map", "map", "map", "scry", "scry", "scry", "scry", "stir", "stir", "stir", "stir", "Karn", "Karn", "Karn", "Karn"]
-	
-	def new_game(self, draw, deck):
-		hardOpening = bool(False);
-		game = gameMechanics(draw, deck)
-		
+		for x in range(60 - len(self.deckToTest)):
+			self.deckToTest.append("dead")
+
+	def StartingHand(self, deck):
 		# Populate the starting hand
 		starting_size = 7
 		decided_on_hand = False
-		game.hand = random.sample(game.deck,7)
+		hand = random.sample(deck,7)
 		
 		# Decide on mulligans
 		# Keeps iff at least one Tron piece
 		while not decided_on_hand and starting_size >0:
-			if "Mine" not in game.hand and "PP" not in game.hand and "Tower" not in game.hand:
+			if "Mine" not in hand and "PP" not in hand and "Tower" not in hand:
 				starting_size -= 1
-				game.hand = random.sample(game.deck, starting_size)
+				hand = random.sample(deck, starting_size)
 			else:
 				decided_on_hand = True
 		#Take the cards out of the deck
-		for card in game.hand:
-			game.deck.remove(card)
+		for card in hand:
+			deck.remove(card)
+		return hand
+
+	def turn(self):
+		pass
+
+	def determine_simulation_end (self, Game):
+		if (Game.turn_count == 3):
+			if "Karn" in Game.battlefield:
+				self.count_turn_3_karn += 1
+				if self.hardOpening:
+					self.hard_success += 1
+				return True
+			elif "Mine" in Game.landpile and "PP" in Game.landpile and "Tower" in Game.landpile and "Karn" not in Game.battlefield:
+				self.turn_3_tron += 1
+				return True
+			else:
+				return True
+		elif (Game.turn_count == 2):
+			tron_in_play = 0
+			for urza_land in ["Mine", "PP", "Tower"]:
+				if urza_land in Game.landpile:
+					tron_in_play += 1
+			if (tron_in_play < 2):
+				#print("Game Ended on turn 2 - fail (lands={}, lands = {} , hand = {})".format(tron_in_play, Game.landpile, Game.hand))
+				return True
+		return False
+	
+	def new_game(self, draw, deck):
+		self.hardOpening = False;
+		game = gameMechanics(draw, deck)
+		
+		game.hand = self.StartingHand(deck)
 
 		# Turn 1
 		########
@@ -71,7 +102,7 @@ class simulation():
 			# How many new tron pieces in hand?
 			new_tron_in_hand = 0
 			for urza_land in ["Mine", "PP", "Tower"]:
-				if urza_land not in self.landpile and urza_land in self.hand:
+				if urza_land not in game.landpile and urza_land in game.hand:
 					new_tron_in_hand += 1
 			
 			# 2 new pieces? Do star to look for Karn
@@ -83,7 +114,7 @@ class simulation():
 				self.map_opening += 1
 			elif new_tron_in_hand == 0: ###Hard openingg
 				game.playCard("star")
-				hardOpening = True;
+				self.hardOpening = True;
 				self.hard_opening += 1
 		elif "map" in game.hand:
 			game.playCard("map")
@@ -121,7 +152,6 @@ class simulation():
 						game.playCard("star")
 			elif "map" in game.battlefield:
 				game.useCard("map")
-
 		else:
 			# No land played yet
 			if "star" in game.battlefield:
@@ -137,9 +167,6 @@ class simulation():
 						if "star" in game.hand:
 							game.playCard("star")
 						# End turn
-					if game.turn.lands_to_play:
-						# You only have one land on Turn 2, so no Turn 3 Karn
-						return
 				else:
 					# You played a land.
 					# Do you have Scrying?
@@ -154,9 +181,8 @@ class simulation():
 							game.useCard("stir")
 						if "star" in game.hand and not stop_playing_stars:
 							game.playCard("star")
-			else:
-				# You only have one land on Turn 2, so no Turn 3 Karn
-				return
+		if self.determine_simulation_end(game):
+			return
 		
 		# Turn 3
 		#########
@@ -169,16 +195,13 @@ class simulation():
 			game.useCard("star")
 		
 		#Play Karn
-		#alterative - (3 unique lands) len(set(game.landpile)) == 3
 		if "Mine" in game.landpile and "PP" in game.landpile and "Tower" in game.landpile:
-			self.turn_3_tron += 1
-			if "Karn" in game.hand:
-				self.count_turn_3_karn += 1
-				if hardOpening:
-					self.hard_success += 1
+			game.playCard("Karn")
+		self.determine_simulation_end(game)
+		return
 	def runSimulation(self):
 		for i in range(self.N):
-			self.new_game(self.on_the_draw, self.deckToTest)
+			self.new_game(self.on_the_draw, self.deckToTest[:])
 	def displayResults(self):
 		print( "Turn 3 Tron {}".format( 100 * float(self.turn_3_tron) / self.N ))
 		print( "Turn 3 Karn {}".format( 100 * float(self.count_turn_3_karn) / self.N ))
@@ -210,17 +233,20 @@ class gameMechanics(object):
 	def playUrzaLand(self):
 		for land in ["Mine", "PP", "Tower"]:
 			if self.turn.lands_to_play and land in self.hand and land not in self.landpile:
+				#print("Playing Land -{}, lands = {} , hand = {})".format(land, self.landpile, self.hand))
 				self.playLand(land)
 			
 	def playCard(self, card):
-		self.hand.remove(card)
-		self.battlefield.append(card)
+		if card in self.hand:
+			self.hand.remove(card)
+			self.battlefield.append(card)
 
 	def newTurn(self):
 		if ( (self.turn != 0) or (self.on_the_draw) ):
 			self.drawCard()
 		self.turn_count = self.turn_count + 1 
 		self.turn.lands_to_play = 1
+		#print ("Turn {} -- Size of hand {},\n hand {} \n battlefield {} {} ".format(self.turn_count, len(self.hand), self.hand, self.battlefield, self.landpile))
 		
 	def useCard(self, card):
 		if card in self.battlefield:
@@ -260,8 +286,6 @@ class gameMechanics(object):
 		self.turn_count = 0
 		self.hand = []
 		self.deck = Deck[:]
-		for x in range(60 - len(self.deck)):
-			self.deck.append("dead")
 		# Populate the battlefield
 		self.battlefield = []
 		self.landpile = []
