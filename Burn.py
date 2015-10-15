@@ -15,6 +15,7 @@ class simulation():
 		self.cardlistAvailable = ['bolt']
 		self.cardlistAvailableLand = ['mountain']
 		self.gameIterations = 10000
+		self.maxTurns = 15
 		self.earliest_victory = []
 
 		for i in range(sizeOfTestpop):
@@ -24,7 +25,8 @@ class simulation():
 	#TODO - expand logic for multiple cards and include more rules.
 		for x in range(0, self.test_population_size) :
 			deck = []
-			for i in range(0,random.randint(0, 50)):
+			#for i in range(0,random.randint(0, 50)):
+			for i in range(0,44):
 				deck.append('bolt')
 			for x in range(60 - len(deck)):
 				deck.append("mountain")
@@ -59,14 +61,13 @@ class simulation():
 			game.hand = self.starting_hand(gameDeck)
 
 			while (game.turn_count < 10 and game.opponents_life_total > 0 ):
-				#print('turn {} - opp life {}'.format(game.turn_count, game.opponents_life_total))
+				print('turn {} - opp life {} - hand = {}'.format(game.turn_count + 1, game.opponents_life_total, game.hand))
 				game.newTurn()
 				game.playLand('mountain')
 				#TODO - move casting spell mechanics into the game mechancis file.
 				game.tapAllLands()
-				while game.turn.mana[3]:
-					game.useCard('bolt')
-					game.turn.mana[3] -= 1
+				while (game.turn.mana[3] and len(game.hand) > 0): #work out stall conditions...
+					game.playCard('bolt')
 				#TODO - add creatures
 			fatalTurn.append(game.turn_count)
 		return sum(fatalTurn)/(len(fatalTurn))
@@ -104,7 +105,7 @@ class simulation():
 				for idx, deck in enumerate(self.deck_to_test):
 					if (len(self.turn_of_kill) > 1):
 						difference = self.turn_of_kill[len(self.turn_of_kill)-1][idx] - self.turn_of_kill[len(self.turn_of_kill)- 2][idx]
-						if (abs(difference) < 0.05) and self.turn_of_kill[len(self.turn_of_kill)-1][idx] != 10:
+						if (abs(difference) < 0.05) and self.turn_of_kill[len(self.turn_of_kill)-1][idx] != self.maxTurns:
 							print('difference = {}'.format(difference))
 							return
 						#else mutate the deck.

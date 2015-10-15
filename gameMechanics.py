@@ -1,21 +1,26 @@
 import random
+from collections import namedtuple
+#required for card library
+
+card = namedtuple('card', 'Name, manaCost, cardType, cardText, power, toughness' )
 
 class gameMechanics(object):
 	class turnMechanics:
-		def __init__(self):		
+		def __init__(self):
 			# Populate counters for the turn
 			self.lands_to_play = 1
 			self.mana = [0,0,0,0,0,0]
-			
+				#White, Blue, Black, Red, Green, Colourless
+
 	def drawCard(self):
 		new_card = random.choice(self.deck)
 		self.hand.append(new_card)
 		self.deck.remove(new_card)
-	
+
 	def tapAllLands(self):
 		for idx,land in enumerate(['plains', 'island', 'swamp', 'mountain', 'forest']): #TODO - alias the colours rather than use index?
 			self.turn.mana[idx] = self.landpile.count(land)
-	
+
 	def playLand(self, land):
 		if land in self.hand:
 			if self.turn.lands_to_play:
@@ -27,21 +32,33 @@ class gameMechanics(object):
 		for land in ["Mine", "PP", "Tower"]:
 			if self.turn.lands_to_play and land in self.hand and land not in self.landpile:
 				self.playLand(land)
-				
+
 	def checkForUrzaTron(self):
 		tronplayed = 0;
 		for land in ["Mine", "PP", "Tower"]:
 			if land in self.landpile:
 				tronplayed += 1
 		return tronplayed
-	
-	def playCard(self, card):
-		if card in self.hand:
-			#add mana cost look up
-			self.hand.remove(card)
-			self.battlefield.append(card)
-			#add lookup for effect
-			
+
+	def playCard(self, cardName):
+		if cardName in self.hand:
+			for card in self.cardDb:
+				if (card.Name == cardName):
+					canCast = True
+					for colour in range(0, len(self.turn.mana)):
+						if card.manaCost[colour] > self.turn.mana[colour]:
+							canCast = False
+					if canCast:
+						#pay costs
+						for colour in range(0, len(self.turn.mana)):
+							self.turn.mana[colour] -= card.manaCost[colour]
+						self.hand.remove(cardName)
+						#get effect
+						if (card.cardType == 'instant') or (card.cardType ==  'sorcery'):
+							card.cardText()
+						else:
+							self.battlefield.append(cardName)
+
 	def playCardSimple(self, card):
 		if card in self.hand:
 			self.hand.remove(card)
@@ -50,11 +67,11 @@ class gameMechanics(object):
 	def newTurn(self):
 		if ( (self.turn_count != 0) or (self.on_the_draw) ):
 			self.drawCard()
-		self.turn_count = self.turn_count + 1 
+		self.turn_count = self.turn_count + 1
 		self.turn.lands_to_play = 1
 		self.turn.mana = [0,0,0,0,0,0]
 		#print ("Turn {} -- Size of hand {},\n hand {} \n battlefield {} {} ".format(self.turn_count, len(self.hand), self.hand, self.battlefield, self.landpile))
-		
+
 	def useCard(self, card):
 		if card in self.battlefield:
 			self.battlefield.remove(card)
@@ -91,6 +108,9 @@ class gameMechanics(object):
 					self.hand.append("star")
 
 	def __init__(self, onTheDraw, Deck):
+		#Generate the Card Database
+		self.cardDb = []
+		self.populateCardDb()
 		# Populate the deck
 		self.turn_count = 0
 		self.hand = []
@@ -101,3 +121,15 @@ class gameMechanics(object):
 		self.turn = self.turnMechanics()
 		self.on_the_draw = onTheDraw
 		self.opponents_life_total = 20
+
+	def populateCardDb(self):
+	#card = namedTuple ('card', 'Name, manaCost, cardType, cardText, power, toughness' )
+		self.cardDb.append(card('bolt', [0,0,0,1,0,0], 'instant', self.boltCardtext, 0 , 0))
+		self.cardDb.append(card('mountain',[0,0,0,0,0,0], 'land', self.mountainCardText, 0 , 0))
+		
+	def boltCardtext(self):
+		#print("Bolt You")
+		self.opponents_life_total -= 3
+
+	def mountainCardText(self):
+		pass
