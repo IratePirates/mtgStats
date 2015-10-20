@@ -60,13 +60,12 @@ class simulation():
 			game = gameMechanics.gameMechanics(self.on_the_draw, gameDeck)
 			game.hand = self.starting_hand(gameDeck)
 
-			while (game.turn_count < 10 and game.opponents_life_total > 0 ):
-				print('turn {} - opp life {} - hand = {}'.format(game.turn_count + 1, game.opponents_life_total, game.hand))
+			while (game.turn_count < self.maxTurns and game.opponents_life_total > 0 ):
+				#print('turn {} - opp life {} - hand = {}'.format(game.turn_count + 1, game.opponents_life_total, game.hand))
 				game.newTurn()
 				game.playLand('mountain')
 				#TODO - move casting spell mechanics into the game mechancis file.
 				game.tapAllLands()
-				while (game.turn.mana[3] and len(game.hand) > 0): #work out stall conditions...
 					game.playCard('bolt')
 				#TODO - add creatures
 			fatalTurn.append(game.turn_count)

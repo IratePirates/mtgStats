@@ -44,11 +44,7 @@ class gameMechanics(object):
 		if cardName in self.hand:
 			for card in self.cardDb:
 				if (card.Name == cardName):
-					canCast = True
-					for colour in range(0, len(self.turn.mana)):
-						if card.manaCost[colour] > self.turn.mana[colour]:
-							canCast = False
-					if canCast:
+					if self.checkCardCanBeCast(card.manaCost):
 						#pay costs
 						for colour in range(0, len(self.turn.mana)):
 							self.turn.mana[colour] -= card.manaCost[colour]
@@ -106,6 +102,22 @@ class gameMechanics(object):
 				elif card_chosen == 0 and "star" in temp_cards:
 					card_chosen = 1
 					self.hand.append("star")
+
+	def numberCardsAbleToPlay(self):
+		count = 0
+		for cardName in self.hand:
+			for card in self.cardDb:
+				if (card.Name == cardName):
+					if ((self.checkCardCanBeCast(card.manaCost)) and ( card.cardType != 'land')):
+						count += 1
+		return count
+
+	def checkCardCanBeCast(self, manaCost):
+		canCast = True
+		for colour in range(0, len(self.turn.mana)):
+			if manaCost[colour] > self.turn.mana[colour]:
+				canCast = False
+		return canCast
 
 	def __init__(self, onTheDraw, Deck):
 		#Generate the Card Database
