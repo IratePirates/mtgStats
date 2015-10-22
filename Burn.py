@@ -7,30 +7,42 @@ import copy
 import gameMechanics
 
 class simulation():
-	def __init__(self, sizeOfTestpop):
-		self.on_the_draw = True
+	def __init__(self, sizeOfTestpop = 10):
+		self.on_the_draw = False
 		self.turn_of_kill = []
 		self.deck_to_test = []
-		self.test_population_size = sizeOfTestpop
-		self.cardlistAvailable = ['bolt']
-		self.cardlistAvailableLand = ['mountain']
+		self.cardlistAvailable = ["bolt"]
+		self.cardlistAvailableLand = ["mountain"]
 		self.gameIterations = 10000
 		self.maxTurns = 15
 		self.earliest_victory = []
 
-		for i in range(sizeOfTestpop):
-			self.earliest_victory.append(10)
+		#Deck optimisation Strategy
+		self.test_population_size = sizeOfTestpop
 
-	def randomiseStartingDecks(self):
+		for i in range(sizeOfTestpop):
+			self.earliest_victory.append(self.maxTurns)
+
+	def randomiseStartingDecks(self, FourCardRule = False):
 	#TODO - expand logic for multiple cards and include more rules.
-		for x in range(0, self.test_population_size) :
-			deck = []
-			#for i in range(0,random.randint(0, 50)):
-			for i in range(0,44):
-				deck.append('bolt')
-			for x in range(60 - len(deck)):
-				deck.append("mountain")
-			self.deck_to_test.append(deck)
+		try:
+			for x in range(0, self.test_population_size) :
+				deck = []
+				numNonLand = random.randint(0, 50)
+				cardsInserted = 0
+				while (cardsInserted < numNonLand):
+					card = self.cardlistAvailable[random.randint(0, len(self.cardlistAvailable) - 1)]
+					if (deck.count(card) < 4) or (FourCardRule is False):
+						deck.append(card)
+						cardsInserted += 1
+				while (cardsInserted < 60):
+					card = self.cardlistAvailableLand[random.randint(0, len(self.cardlistAvailableLand) - 1)]
+					if (deck.count(card) < 4) or (FourCardRule is False) or card is "island" or card is "swamp" or card is "mountain" or card is "forest" or card is "plains":
+						deck.append(card)
+						cardsInserted += 1
+				self.deck_to_test.append(deck)
+		except Exception as e:
+			print ("Something went horribly wrong - {}".format(e))
 
 	def starting_hand(self, deck):
 	#TODO  - improve logic in here.
@@ -66,6 +78,7 @@ class simulation():
 				game.playLand('mountain')
 				#TODO - move casting spell mechanics into the game mechancis file.
 				game.tapAllLands()
+				while (game.turn.mana[3] and game.numberCardsAbleToPlay()):
 					game.playCard('bolt')
 				#TODO - add creatures
 			fatalTurn.append(game.turn_count)
@@ -110,8 +123,10 @@ class simulation():
 						#else mutate the deck.
 		except KeyboardInterrupt:
 			print ("Caught Escape character")
+		except Exception as e:
+			print ("Caught Exception - {}".format(e))
 
-sim = simulation(1)
+sim = simulation()
 sim.randomiseStartingDecks()
 sim.runSimulation()
 sim.displayResults()
