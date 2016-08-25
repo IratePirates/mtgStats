@@ -7,7 +7,7 @@ import copy
 import gameMechanics
 
 class simulation():
-	def __init__(self, sizeOfTestpop = 10):
+	def __init__(self, sizeOfTestpop = 2):
 		self.on_the_draw = False
 		self.turn_of_kill = []
 		self.deck_to_test = []
@@ -19,7 +19,12 @@ class simulation():
 
 		#Deck optimisation Strategy
 		self.test_population_size = sizeOfTestpop
+		self.mutateEnable = True
+		self.numberDecksToMutate = 1
+		self.cardsToMutate = 3
+		self.convergenceThreshold = 0.05
 
+		self.cardlistAllAvailable = self.cardlistAvailable + self.cardlistAvailableLand
 		for i in range(sizeOfTestpop):
 			self.earliest_victory.append(self.maxTurns)
 
@@ -59,7 +64,6 @@ class simulation():
 				hand = random.sample(deck, starting_size)
 			else:
 				decided_on_hand = True
-
 		#Take the cards out of the deck
 		for card in hand:
 			deck.remove(card)
@@ -107,24 +111,53 @@ class simulation():
 		try:
 			while (do_simulation):
 			#for each deck simulate the games
-				DeckResults = []
-				for deck in self.deck_to_test:
-					DeckResults.append(self.playDeck(deck))
+				DeckResults = [None]*self.test_population_size
+				for idx,deck in enumerate(self.deck_to_test):
+					DeckResults[idx] = (self.playDeck(deck))
+				convergence = False
+				mutateDeck = True if ((self.test_population_size > 1) and (self.mutateEnable)) else False
 
-				self.turn_of_kill.append(DeckResults)
-
+				difference = [None]*self.test_population_size
 				#Check for convergence of turn to kill (in final two values)
 				for idx, deck in enumerate(self.deck_to_test):
-					if (len(self.turn_of_kill) > 1):
-						difference = self.turn_of_kill[len(self.turn_of_kill)-1][idx] - self.turn_of_kill[len(self.turn_of_kill)- 2][idx]
-						if (abs(difference) < 0.05) and self.turn_of_kill[len(self.turn_of_kill)-1][idx] != self.maxTurns:
-							print('difference = {}'.format(difference))
-							return
-						#else mutate the deck.
+					#TODO - Get this better difference working...
+					#if (len(self.turn_of_kill) > 2):
+					#	oldDifference = sum(self.turn_of_kill[][idx])/len(self.turn_of_kill[][idx])
+					self.turn_of_kill.append(DeckResults)
+					#	newDifference = sum(self.turn_of_kill[][idx])/len(self.turn_of_kill[][idx])
+					#	difference = oldDifference - newDifference
+					#elif(len(self.turn_of_kill) == 2):
+					if(len(self.turn_of_kill) > 2):
+						difference[idx] = self.turn_of_kill[len(self.turn_of_kill)-1][idx] - self.turn_of_kill[len(self.turn_of_kill)- 2][idx]
+
+				if(len(self.turn_of_kill) > 2):
+					print("diffs - {}".format(difference))
+					for idx,value in enumerate(difference):
+						if ((self.turn_of_kill[len(self.turn_of_kill)-1][idx] is not None) and (value is not None)):
+							if (abs(value) < self.convergenceThreshold):
+								print('deck {} - difference = {}'.format(idx, value))
+								convergence = True
+
+				if (convergence):
+					return
+
+				if (mutateDeck):
+					print ("***Mutating Decks***")
+					mutant_population = random.sample(self.deck_to_test, self.numberDecksToMutate)
+					for mutant in mutant_population:
+						#self.deck_to_test.remove(mutant)
+						cards_to_change = random.sample(range(60), self.cardsToMutate)
+
+						for card in cards_to_change:
+							new_card = self.cardlistAllAvailable[random.randint(0, len(self.cardlistAllAvailable) - 1)]
+							mutant[card]= new_card
+							print("card - {} to change to {}".format(mutant[card] , new_card) )
+					self.print_decks()
+					#TODO - Fix score on deck being mutated.
 		except KeyboardInterrupt:
 			print ("Caught Escape character")
-		except Exception as e:
-			print ("Caught Exception - {}".format(e))
+		#except Exception as e:
+		#	print ("Caught Exception - {}".format(e))
 
 sim = simulation()
 sim.randomiseStartingDecks()
